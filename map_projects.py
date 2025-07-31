@@ -2254,24 +2254,25 @@ def main():
     with st.sidebar:
         st.header("📂 Φόρτωση Δεδομένων")
         
-        # Add sample data option
-        use_sample_data = st.checkbox("Χρήση δείγματος δεδομένων", value=False)
+        # Check for corrected_test_.xlsx in the current directory
+        excel_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "corrected_test_.xlsx")
         
-        if not use_sample_data:
+        if os.path.exists(excel_file_path):
+            # If the file exists, use it automatically
+            try:
+                uploaded_file = open(excel_file_path, 'rb')
+                st.success("✅ Βρέθηκε και φορτώθηκε το αρχείο: corrected_test_.xlsx")
+            except Exception as e:
+                st.error(f"Σφάλμα κατά τη φόρτωση του αρχείου: {e}")
+                uploaded_file = None
+        else:
+            # If the file doesn't exist, show file uploader
+            st.warning("Δεν βρέθηκε το αρχείο corrected_test_.xlsx. Παρακαλώ ανεβάστε το αρχείο σας.")
             uploaded_file = st.file_uploader(
                 "📊 Ανεβάστε το Excel αρχείο:", 
                 type=['xlsx', 'xls'],
                 help="Επιλέξτε αρχείο Excel με έργα ύδρευσης"
             )
-        else:
-            # Provide sample data path
-            sample_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sample_data.xlsx")
-            if os.path.exists(sample_path):
-                uploaded_file = open(sample_path, 'rb')
-                st.info("Φορτώθηκαν τα δείγματα δεδομένων.")
-            else:
-                st.warning("Δεν βρέθηκε το αρχείο δειγμάτων. Παρακαλώ ανεβάστε το δικό σας αρχείο.")
-                uploaded_file = None
         
         if uploaded_file:
             with st.spinner("⏳ Φόρτωση και ανάλυση δεδομένων..."):

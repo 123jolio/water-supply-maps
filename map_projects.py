@@ -2254,20 +2254,20 @@ def main():
     with st.sidebar:
         st.header("📂 Φόρτωση Δεδομένων")
         
-        # Check for corrected_test_.xlsx in the current directory
-        excel_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "corrected_test_.xlsx")
+        # Check for corrected_teset_.xlsx in the current directory
+        excel_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "corrected_teset_.xlsx")
         
         if os.path.exists(excel_file_path):
             # If the file exists, use it automatically
             try:
                 uploaded_file = open(excel_file_path, 'rb')
-                st.success("✅ Βρέθηκε και φορτώθηκε το αρχείο: corrected_test_.xlsx")
+                st.success("✅ Βρέθηκε και φορτώθηκε το αρχείο: corrected_teset_.xlsx")
             except Exception as e:
                 st.error(f"Σφάλμα κατά τη φόρτωση του αρχείου: {e}")
                 uploaded_file = None
         else:
             # If the file doesn't exist, show file uploader
-            st.warning("Δεν βρέθηκε το αρχείο corrected_test_.xlsx. Παρακαλώ ανεβάστε το αρχείο σας.")
+            st.warning("Δεν βρέθηκε το αρχείο corrected_teset_.xlsx. Παρακαλώ ανεβάστε το αρχείο σας.")
             uploaded_file = st.file_uploader(
                 "📊 Ανεβάστε το Excel αρχείο:", 
                 type=['xlsx', 'xls'],

@@ -475,10 +475,25 @@ def normalize_greek(text):
     return text
 
 @st.cache_data(ttl=3600, show_spinner="Analyzing Excel file...")
-def load_and_analyze_excel_enhanced(excel_file):
-    """Enhanced loading with comprehensive data analysis."""
+def load_and_analyze_excel_enhanced(excel_file, selected_sheet=None):
+    """Enhanced loading with comprehensive data analysis and multiple sheet support."""
     try:
-        df = pd.read_excel(excel_file, sheet_name=0)
+        # First, get all sheet names
+        excel_data = pd.ExcelFile(excel_file)
+        sheet_names = excel_data.sheet_names
+        
+        # Display sheet selection if multiple sheets exist
+        if len(sheet_names) > 1 and selected_sheet is None:
+            st.info(f"📋 Βρέθηκαν {len(sheet_names)} φύλλα εργασίας: {', '.join(sheet_names)}")
+            st.warning("⚠️ Χρησιμοποιείται το πρώτο φύλλο. Επιλέξτε συγκεκριμένο φύλλο από την πλαϊνή μπάρα.")
+            selected_sheet = sheet_names[0]
+        elif selected_sheet is None:
+            selected_sheet = sheet_names[0]
+        
+        # Load the selected sheet
+        df = pd.read_excel(excel_file, sheet_name=selected_sheet)
+        
+        st.success(f"📊 Φορτώθηκε φύλλο: **{selected_sheet}**")
         
 
 
@@ -2274,9 +2289,55 @@ def main():
                 help="Επιλέξτε αρχείο Excel με έργα ύδρευσης"
             )
         
+        # External Data Source Integration
+        st.markdown("---")
+        st.header("🌐 Εξωτερικές Πηγές Δεδομένων")
+        
+        with st.expander("📝 NotebookLM & Εξωτερικοί Σύνδεσμοι", expanded=False):
+            external_url = st.text_input(
+                "🔗 URL Εξωτερικής Πηγής:",
+                placeholder="π.χ. https://notebooklm.google.com/notebook/...",
+                help="Εισάγετε σύνδεσμο NotebookLM ή άλλης εξωτερικής πηγής δεδομένων"
+            )
+            
+            if external_url:
+                st.info(f"🔗 Καταχωρήθηκε σύνδεσμος: {external_url}")
+                st.session_state['external_url'] = external_url
+                st.markdown("""
+                **💡 Οδηγίες για χρήση εξωτερικών πηγών:**
+                - Αντιγράψτε δεδομένα από το NotebookLM
+                - Επικολλήστε σε Excel αρχείο
+                - Ανεβάστε το αρχείο παραπάνω
+                """)
+        
+        # Sheet Selection (will be populated after file upload)
+        selected_sheet = None
+        if 'excel_sheets' in st.session_state and st.session_state['excel_sheets']:
+            st.markdown("---")
+            st.header("📋 Επιλογή Φύλλου Εργασίας")
+            selected_sheet = st.selectbox(
+                "Επιλέξτε φύλλο εργασίας:",
+                st.session_state['excel_sheets'],
+                help="Επιλέξτε το φύλλο που περιέχει τα δεδομένα έργων ύδρευσης"
+            )
+        
         if uploaded_file:
             with st.spinner("⏳ Φόρτωση και ανάλυση δεδομένων..."):
-                df = load_and_analyze_excel_enhanced(uploaded_file)
+                # First load to get sheet names
+                try:
+                    excel_data = pd.ExcelFile(uploaded_file)
+                    sheet_names = excel_data.sheet_names
+                    st.session_state['excel_sheets'] = sheet_names
+                    
+                    if len(sheet_names) > 1 and selected_sheet is None:
+                        st.rerun()  # Refresh to show sheet selector
+                    
+                except Exception as e:
+                    st.error(f"Σφάλμα κατά την ανάγνωση φύλλων εργασίας: {e}")
+                    sheet_names = [0]
+                    selected_sheet = 0
+                
+                df = load_and_analyze_excel_enhanced(uploaded_file, selected_sheet)
                 
                 if df is not None:
                     # Cache the loaded dataframe

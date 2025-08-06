@@ -2494,12 +2494,14 @@ def main():
             display_df = search_df.copy()
 
     # Create tabs for different views
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "🗺️ Διαδραστικός Χάρτης ανά Νομό", 
         "📊 Διαδραστικά Γραφήματα", 
         "📋 Συγκεντρωτικοί Πίνακες",
         "🔍 Ανάλυση Προόδου Έργων",
-        "📍 Λεπτομερής Ανάλυση ανά Νομό/Δήμο"
+        "📍 Λεπτομερής Ανάλυση ανά Νομό/Δήμο",
+        "📋 Πολλαπλά Φύλλα Excel",
+        "🌐 Εξωτερικές Πηγές"
     ])
 
     with tab1:
@@ -3123,6 +3125,136 @@ def create_municipality_export(df):
                 file_name="projects_by_municipality.csv",
                 mime="text/csv"
             )
+
+def analyze_multiple_sheets(excel_file):
+    """Analyze all sheets in an Excel file and provide comparison."""
+    try:
+        excel_data = pd.ExcelFile(excel_file)
+        sheet_names = excel_data.sheet_names
+        
+        if len(sheet_names) <= 1:
+            st.info("📊 Το αρχείο περιέχει μόνο ένα φύλλο εργασίας.")
+            return None
+        
+        st.header("📋 Ανάλυση Πολλαπλών Φύλλων Εργασίας")
+        
+        sheets_data = {}
+        sheets_summary = []
+        
+        # Load all sheets
+        for sheet_name in sheet_names:
+            try:
+                df_sheet = pd.read_excel(excel_file, sheet_name=sheet_name)
+                sheets_data[sheet_name] = df_sheet
+                
+                # Basic statistics for each sheet
+                summary = {
+                    'Φύλλο': sheet_name,
+                    'Γραμμές': len(df_sheet),
+                    'Στήλες': len(df_sheet.columns),
+                    'Κενές Γραμμές': df_sheet.isnull().all(axis=1).sum(),
+                    'Μέγεθος (MB)': round(df_sheet.memory_usage(deep=True).sum() / 1024**2, 2)
+                }
+                sheets_summary.append(summary)
+                
+            except Exception as e:
+                st.warning(f"⚠️ Αδυναμία φόρτωσης φύλλου '{sheet_name}': {e}")
+        
+        # Display summary table
+        if sheets_summary:
+            summary_df = pd.DataFrame(sheets_summary)
+            st.subheader("📊 Συγκεντρωτικά Στατιστικά Φύλλων")
+            st.dataframe(summary_df, use_container_width=True)
+            
+            # Charts comparing sheets
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                fig_rows = px.bar(
+                    summary_df, 
+                    x='Φύλλο', 
+                    y='Γραμμές',
+                    title="📈 Αριθμός Γραμμών ανά Φύλλο",
+                    color='Γραμμές',
+                    color_continuous_scale='viridis'
+                )
+                fig_rows.update_layout(height=400)
+                st.plotly_chart(fig_rows, use_container_width=True)
+            
+            with col2:
+                fig_cols = px.bar(
+                    summary_df, 
+                    x='Φύλλο', 
+                    y='Στήλες',
+                    title="📊 Αριθμός Στηλών ανά Φύλλο",
+                    color='Στήλες',
+                    color_continuous_scale='plasma'
+                )
+                fig_cols.update_layout(height=400)
+                st.plotly_chart(fig_cols, use_container_width=True)
+        
+        return sheets_data
+        
+    except Exception as e:
+        st.error(f"Σφάλμα κατά την ανάλυση φύλλων: {e}")
+        return None
+
+def integrate_external_data_source(url):
+    """Integrate external data sources like NotebookLM."""
+    st.header("🌐 Εξωτερική Πηγή Δεδομένων")
+    
+    if 'notebooklm.google.com' in url.lower():
+        st.info("📝 Ανιχνεύθηκε NotebookLM σύνδεσμος")
+        
+        st.markdown("""
+        ### 📝 Οδηγίες για NotebookLM:
+        
+        1. **Ανοίξτε το NotebookLM** στον παραπάνω σύνδεσμο
+        2. **Αντιγράψτε τα δεδομένα** που θέλετε να αναλύσετε
+        3. **Επικολλήστε σε ένα νέο Excel αρχείο**
+        4. **Ανεβάστε το αρχείο** στην εφαρμογή
+        
+        **🔗 Σύνδεσμος:** [NotebookLM]({url})
+        """)
+        
+        # Add a button to open the link
+        if st.button("🔗 Άνοιγμα NotebookLM", key="open_notebooklm"):
+            st.markdown(f'<meta http-equiv="refresh" content="0; url={url}">', unsafe_allow_html=True)
+    
+    else:
+        st.info(f"🌐 Εξωτερικός σύνδεσμος: {url}")
+        st.markdown("""
+        ### 📊 Οδηγίες για εξωτερικές πηγές:
+        
+        1. **Επισκεφθείτε τη σελίδα** στον παραπάνω σύνδεσμο
+        2. **Εξάγετε τα δεδομένα** σε Excel ή CSV μορφή
+        3. **Ανεβάστε το αρχείο** στην εφαρμογή
+        """)
+    
+    # Add data preview area
+    st.markdown("---")
+    st.subheader("📝 Περιοχή Επικόλλησης Δεδομένων")
+    
+    pasted_data = st.text_area(
+        "Επικολλήστε τα δεδομένα εδώ:",
+        height=200,
+        placeholder="Αντιγράψτε και επικολλήστε δεδομένα από το NotebookLM ή άλλες πηγές..."
+    )
+    
+    if pasted_data:
+        st.success("✅ Δεδομένα επικολλήθηκαν!")
+        st.info("💾 Αποθηκεύστε τα δεδομένα σε Excel αρχείο και ανεβάστε το παραπάνω.")
+        
+        # Try to parse the pasted data
+        try:
+            import io
+            # Try to parse as CSV-like data
+            lines = pasted_data.strip().split('\n')
+            if len(lines) > 1:
+                st.write(f"📄 Ανιχνεύθηκαν {len(lines)} γραμμές δεδομένων")
+                st.text("\n".join(lines[:5]) + ("\n..." if len(lines) > 5 else ""))
+        except Exception as e:
+            st.warning(f"⚠️ Αδυναμία ανάλυσης δεδομένων: {e}")
 
 if __name__ == "__main__":
     main()
